@@ -1,52 +1,83 @@
 package com.example.fumiaki.stopwatchapp;
 
+import android.os.Handler;
+import android.os.SystemClock;
+import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity {
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+
+
+public class MainActivity extends ActionBarActivity {
+
+    private long startTime;
+    private long elapsedTime = 0l;
+
+    private Handler handler = new Handler();
+    private Runnable updateTimer;
+
+    private Button startButton;
+    private Button stopButton;
+    private Button resetButton;
+    private TextView timerLabel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        startButton = (Button) findViewById(R.id.startButton);
+        stopButton = (Button) findViewById(R.id.stopButton);
+        resetButton = (Button) findViewById(R.id.resetButton);
+        timerLabel = (TextView) findViewById(R.id.timerLabel);
+
+        setButtonState(true, false, false);
+    }
+
+    public void setButtonState(boolean start, boolean stop, boolean reset) {
+        startButton.setEnabled(start);
+        stopButton.setEnabled(stop);
+        resetButton.setEnabled(reset);
+    }
+
+    public void startTimer(View view) {
+        // startTimeの取得
+        startTime = SystemClock.elapsedRealtime(); // 起動してからの経過時間（ミリ秒）
+
+        // 一定時間ごとに現在の経過時間を表示
+        // Handler -> Runnable(処理) -> UI
+        updateTimer = new Runnable() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            public void run() {
+                long t = SystemClock.elapsedRealtime() - startTime + elapsedTime; // ミリ秒
+                SimpleDateFormat sdf = new SimpleDateFormat("mm:ss.SSS", Locale.US);
+                timerLabel.setText(sdf.format(t));
+                handler.removeCallbacks(updateTimer);
+                handler.postDelayed(updateTimer, 10);
             }
-        });
+        };
+        handler.postDelayed(updateTimer, 10);
+
+        // ボタンの操作
+        setButtonState(false, true, false);
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+    public void stopTimer(View view) {
+        elapsedTime += SystemClock.elapsedRealtime() - startTime;
+        handler.removeCallbacks(updateTimer);
+        setButtonState(true, false, true);
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    public void resetTimer(View view) {
+        elapsedTime = 0l;
+        timerLabel.setText(R.string.timer_label);
+        setButtonState(true, false, false);
     }
+
 }
